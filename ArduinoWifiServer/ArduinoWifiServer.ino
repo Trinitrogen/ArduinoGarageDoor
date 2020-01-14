@@ -68,8 +68,9 @@ void loop() {
             client.println();
 
             // the content of the HTTP response follows the header:
-            client.print("Click <a href=\"/H\">here</a> turn the LED on pin 9 on<br>");
-            client.print("Click <a href=\"/L\">here</a> turn the LED on pin 9 off<br>");
+            client.print("Click <a href=\"/H\">here</a> turn the LED on pin 4 on<br>");
+            client.print("Click <a href=\"/L\">here</a> turn the LED on pin 4 off<br><br><br><br><br>");
+            client.print("Click <a href=\"/Garage\">here</a> cycle the relay<br>");
 
             // The HTTP response ends with another blank line:
             client.println();
@@ -86,12 +87,25 @@ void loop() {
         if (currentLine.endsWith("GET /H")) {
           digitalWrite(LED_BUILTIN, HIGH);
           digitalWrite(4, HIGH);
-          //digitalWrite(9, HIGH);               // GET /H turns the LED on
         }
         if (currentLine.endsWith("GET /L")) {
           digitalWrite(LED_BUILTIN, LOW);
           digitalWrite(4, LOW);
-          //digitalWrite(9, LOW);                // GET /L turns the LED off
+        }
+        if (currentLine.endsWith("GET /Garage")) {
+          digitalWrite(LED_BUILTIN, HIGH);
+          digitalWrite(4, HIGH);
+          delay(500);
+          digitalWrite(LED_BUILTIN,LOW);
+          digitalWrite(4, LOW);
+          delay(500);
+
+          IPAddress ip = WiFi.localIP();
+            
+          client.println("HTTP/1.1 301 Moved Permanently");
+          client.println("Location: http://www.google.com");
+          client.println();
+          
         }
       }
     }
