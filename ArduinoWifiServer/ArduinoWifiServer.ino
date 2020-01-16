@@ -1,9 +1,12 @@
 /*
  * Adapted from https://www.arduino.cc/en/Tutorial/WiFiNINASimpleWebServerWiFI
+ * https://startingelectronics.org/tutorials/arduino/ethernet-shield-web-server-tutorial/web-server-read-switch-using-AJAX/
 */
 
 #include <SPI.h>
 #include <WiFiNINA.h>
+#include <ArduinoHttpClient.h>
+
 
 #include "arduino_secrets.h"
 ///////please enter your sensitive data in the Secret tab/arduino_secrets.h
@@ -14,6 +17,8 @@ int keyIndex = 0;                 // your network key Index number (needed only 
 
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
+
+String HTTP_req;
 
 void setup() {
   Serial.begin(9600);      // initialize serial communication
@@ -56,6 +61,7 @@ void loop() {
       if (client.available()) {             // if there's bytes to read from the client,
         char c = client.read();             // read a byte, then
         Serial.write(c);                    // print it out the serial monitor
+        HTTP_req += c;  // save the HTTP request 1 char at a time
         if (c == '\n') {                    // if the byte is a newline character
 
           // if the current line is blank, you got two newline characters in a row.
@@ -65,16 +71,43 @@ void loop() {
             // and a content-type so the client knows what's coming, then a blank line:
             client.println("HTTP/1.1 200 OK");
             client.println("Content-type:text/html");
+            client.println("Connection: keep-alive");
             client.println();
-
-            // the content of the HTTP response follows the header:
-            client.print("Click <a href=\"/H\">here</a> turn the LED on pin 4 on<br>");
-            client.print("Click <a href=\"/L\">here</a> turn the LED on pin 4 off<br><br><br><br><br>");
-            client.print("Click <a href=\"/Garage\">here</a> cycle the relay<br>");
-
-            // The HTTP response ends with another blank line:
-            client.println();
-            // break out of the while loop:
+            
+              if (HTTP_req.indexOf("flip_switch") > -1) {
+                  CycleRelay(4);
+              }
+              else {  // HTTP request for web page
+                  // send web page - contains JavaScript with AJAX calls
+                  client.println("<!DOCTYPE html>");
+                  client.println("<html>");
+                  client.println("<head>");
+                  client.println("<title>Arduino Web Page</title>");
+                  client.println("<script>");
+                  client.println("function GetSwitchState() {");
+                  client.println("nocache = \"&nocache=\"\
+                                                   + Math.random() * 1000000;");
+                  client.println("var request = new XMLHttpRequest();");
+                  client.println("request.onreadystatechange = function() {");
+                  client.println("if (this.readyState == 4) {");
+                  client.println("if (this.status == 200) {");
+                  client.println("if (this.responseText != null) {");
+                  client.println("document.getElementById(\"switch_txt\").innerHTML = this.responseText;");
+                  client.println("}}}}");
+                  client.println("request.open(\"GET\", \"flip_switch\" + nocache, true);");
+                  client.println("request.send(null);");
+                  client.println("}");
+                  client.println("</script>");
+                  client.println("</head>");
+                  client.println("<body>");
+                  client.println("<h1>Garage Door Opener</h1>");
+                  client.println("<button type=\"button\"\
+                      onclick=\"GetSwitchState()\">Push Button</button>");
+                  client.println("</body>");
+                  client.println("</html>");
+              }
+              HTTP_req = "";            // finished with request, empty string
+              
             break;
           } else {    // if you got a newline, then clear currentLine:
             currentLine = "";
@@ -92,21 +125,6 @@ void loop() {
           digitalWrite(LED_BUILTIN, LOW);
           digitalWrite(4, LOW);
         }
-        if (currentLine.endsWith("GET /Garage")) {
-          digitalWrite(LED_BUILTIN, HIGH);
-          digitalWrite(4, HIGH);
-          delay(500);
-          digitalWrite(LED_BUILTIN,LOW);
-          digitalWrite(4, LOW);
-          delay(500);
-
-          IPAddress ip = WiFi.localIP();
-            
-          client.println("HTTP/1.1 301 Moved Permanently");
-          client.println("Location: http://www.google.com");
-          client.println();
-          
-        }
       }
     }
     // close the connection:
@@ -115,6 +133,16 @@ void loop() {
   }
 }
 
+
+void CycleRelay(int pin)
+{
+          digitalWrite(LED_BUILTIN, HIGH);
+          digitalWrite(pin, HIGH);
+          delay(500);
+          digitalWrite(LED_BUILTIN,LOW);
+          digitalWrite(pin, LOW);
+          delay(500);
+}
 void printWifiStatus() {
   // print the SSID of the network you're attached to:
   Serial.print("SSID: ");
