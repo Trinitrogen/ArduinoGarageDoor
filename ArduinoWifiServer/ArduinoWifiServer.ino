@@ -165,7 +165,6 @@ void CycleRelay(int pin)
           digitalWrite(LED_BUILTIN,LOW);
           digitalWrite(pin, LOW);
           delay(500);
-          discord_send("Garage Door Relay Triggered");
 }
 void printWifiStatus() {
   // print the SSID of the network you're attached to:
