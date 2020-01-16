@@ -14,6 +14,8 @@
 char ssid[] = SECRET_SSID;        // your network SSID (name)
 char pass[] = SECRET_PASS;    // your network password (use for WPA, or use as key for WEP)
 int keyIndex = 0;                 // your network key Index number (needed only for WEP)
+const String discord_webhook = SECRET_WEBHOOK;
+const String discord_tts = SECRET_TTS;
 
 int status = WL_IDLE_STATUS;
 WiFiServer server(80);
@@ -133,6 +135,27 @@ void loop() {
   }
 }
 
+void discord_send(String content) {
+  const char server[] = "discordapp.com";
+  const int port = 443;
+  const String discord_webhook = SECRET_WEBHOOK;
+  const String discord_tts = SECRET_TTS;
+  WiFiSSLClient client;
+  HttpClient http_client = HttpClient(client, server, port);
+  
+  Serial.println("[HTTP] Connecting to Discord...");
+  Serial.println("[HTTP] Message: " + content);
+  Serial.println("[HTTP] TTS: " + discord_tts);
+  http_client.post(discord_webhook, "application/json", "{\"content\":\"" + content + "\", \"tts\":" + discord_tts + "}");
+  // read the status code and body of the response
+  int statusCode = http_client.responseStatusCode();
+  String response = http_client.responseBody();
+
+  Serial.print("[HTTP] Status code: ");
+  Serial.println(statusCode);
+  Serial.print("[HTTP] Response: ");
+  Serial.println(response);
+}
 
 void CycleRelay(int pin)
 {
@@ -142,6 +165,7 @@ void CycleRelay(int pin)
           digitalWrite(LED_BUILTIN,LOW);
           digitalWrite(pin, LOW);
           delay(500);
+          discord_send("Garage Door Relay Triggered");
 }
 void printWifiStatus() {
   // print the SSID of the network you're attached to:
